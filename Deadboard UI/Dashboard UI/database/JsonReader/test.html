@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Gruppen & Steps mit getBack-Logik</title>
+</head>
+<body>
+  <h1>Ablauf mit getBack</h1>
+  <div id="content"></div>
+
+  <script src="data.js"></script>
+  <script>
+    // 1) Alle Gruppen in einem Lookup speichern
+    const groupsLookup = {};
+    jsonData.forEach(procedure => {
+      procedure.procedureGroups.forEach(group => {
+        groupsLookup[group.id] = group;
+      });
+    });
+
+    // 2) Rekursive Funktion zum Durchlaufen
+    //    Liefert ein Array (executionOrder), das die Reihenfolge aller
+    //    "Betrete Gruppe", "Step", "Verlasse Gruppe" beschreibt.
+    function traverseGroup(groupId, visited, executionOrder) {
+      if (!groupId) return;
+      if (visited.has(groupId)) {
+        // Falls du Endlosschleifen vermeiden willst, breche ab, wenn Gruppe schon besucht
+        return;
+      }
+
+      visited.add(groupId);
+      const currentGroup = groupsLookup[groupId];
+      if (!currentGroup) {
+        console.warn("Gruppe mit ID", groupId, "nicht gefunden!");
+        return;
+      }
+
+      // -- Markiere Gruppe-Eintritt im "executionOrder"
+      executionOrder.push({
+        type: 'group-enter',
+        groupId: groupId,
+        description: currentGroup.description
+      });
+
+      // -- Steps dieser Gruppe durchlaufen
+      for (let i = 0; i < currentGroup.steps.length; i++) {
+        const step = currentGroup.steps[i];
+
+        // Step ins executionOrder eintragen
+        executionOrder.push({
+          type: 'step',
+          groupId: groupId,
+          stepId: step.id,
+          name: step.name,
+          detail: step.detail
+        });
+
+        // Falls dieser Step ein goToID hat, rufe Zielgruppe auf
+        if (step.goToID) {
+          // Rufe rekursiv traverseGroup auf
+          traverseGroup(step.goToID, visited, executionOrder);
+
+          // Wenn getBack = false -> abbrechen
+          if (step.getBack === false) {
+            // => wir verlassen diese Gruppe sofort
+            break; 
+          }
+          // Ist getBack = true, laufen wir normal weiter => next Step
+        }
+      }
+
+      // -- Markiere Gruppe-Austritt
+      executionOrder.push({
+        type: 'group-exit',
+        groupId: groupId,
+        description: currentGroup.description
+      });
+    }
+
+    // 3) Starte mit einer bestimmten Gruppe (z.B. "Main" oder die erste)
+    //    Hier musst du wissen, welche Gruppe dein "Einstiegspunkt" ist.
+    //    Oft ist das im JSON erkennbar (z.B. "Main" oder "b5672dc8-73b5-4706-999d-b82ae86712b4" usw.)
+    const startGroupId = Object.keys(groupsLookup)[0]; // Oder hart codiert: "b5672dc8-73b5-4706-999d-b82ae86712b4"
+    const visitedSet = new Set();
+    const executionOrder = [];
+
+    traverseGroup(startGroupId, visitedSet, executionOrder);
+
+    // 4) Jetzt geben wir die "executionOrder" im Browser aus
+    const contentDiv = document.getElementById("content");
+
+    let currentUl = null;
+    executionOrder.forEach(entry => {
+      if (entry.type === 'group-enter') {
+        // Neue Gruppe: Überschrift + neue Liste
+        const h2 = document.createElement('h2');
+        h2.textContent = `Gruppe: ${entry.description} (ID: ${entry.groupId})`;
+        contentDiv.appendChild(h2);
+
+        currentUl = document.createElement('ul');
+        contentDiv.appendChild(currentUl);
+      }
+      else if (entry.type === 'step') {
+        // Step als Listeneintrag
+        if (currentUl) {
+          const li = document.createElement('li');
+          li.innerHTML = `
+            <strong>Name:</strong> ${entry.name}<br>
+            <strong>Detail:</strong> ${entry.detail}
+          `;
+          currentUl.appendChild(li);
+        }
+      }
+      else if (entry.type === 'group-exit') {
+        // Optional kannst du markieren, dass Gruppe verlassen wird
+        const p = document.createElement('p');
+        p.style.fontStyle = 'italic';
+        p.textContent = `Verlasse Gruppe: ${entry.description}`;
+        contentDiv.appendChild(p);
+      }
+    });
+  </script>
+</body>
+</html>

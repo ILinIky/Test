@@ -1,0 +1,19 @@
+SELECT 
+    e.employee_id,
+    e.first_name,
+    e.last_name,
+    d.department_name,
+    p.project_name,
+    s.salary
+FROM 
+    employees e
+INNER JOIN 
+    departments d ON e.department_id = d.department_id
+LEFT JOIN 
+    projects p ON e.employee_id = p.employee_id
+RIGHT JOIN 
+    salaries s ON e.employee_id = s.employee_id
+WHERE 
+    s.salary > 50000
+ORDER BY 
+    d.department_name, e.last_name;

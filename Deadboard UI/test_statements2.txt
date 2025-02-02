@@ -1,0 +1,296 @@
+
+        WITH Masterdata AS (
+            SELECT [BOARD customer group], [Key account], [REP Auto GI Other], [SU - Area Reporting], [REP Business Unit],
+                ROW_NUMBER() OVER (PARTITION BY [BOARD customer group] ORDER BY [BOARD customer group]) AS rn
+            FROM [board_staging_ROB].[dbo].[DP_RD_PPortfolio_BCG_Masterdata_all]
+        )
+        INSERT INTO [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_ACT_all] (
+            [BOARD customer group],
+            [Key account],
+            [REP Auto GI Other],
+            [SU - Area DESC],
+            [REP Business Unit],
+            [Product],
+            [Plant],
+            [Class],
+            [Product Family DESC],
+            [Month],
+            [Actuals]
+        )
+        SELECT 
+            m.[BOARD customer group],
+            m.[Key account],
+            m.[REP Auto GI Other],
+            m.[SU - Area Reporting],
+            m.[REP Business Unit],
+            i.[Product],
+            i.[Plant],
+            i.[Class],
+            i.[Product Family],
+            i.[Month],
+            i.[Spalte 4] as Actuals
+        FROM Masterdata m
+        JOIN [board_staging_ROB].[dbo].[DP_RD_PPortfolio_IST] i
+            ON m.[BOARD customer group] = i.[BOARD customer group]
+        JOIN [board_staging_ROB].[dbo].[DP_RD_PPortfolio_Area_2] a
+            ON m.[BOARD customer group] = a.[BOARD customer group]
+        WHERE m.rn = 1
+        AND a.[Spalte 2] != 0;
+        
+        
+
+        WITH Masterdata AS (
+            SELECT [BOARD customer group], [Key account], [REP Auto GI Other], [SU - Area Reporting], [REP Business Unit],
+                ROW_NUMBER() OVER (PARTITION BY [BOARD customer group] ORDER BY [BOARD customer group]) AS rn
+            FROM [board_staging_ROB].[dbo].[DP_RD_PPortfolio_BCG_Masterdata_all]
+        )
+        INSERT INTO [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_PLAN_all] (
+            [BOARD customer group],
+            [Key account],
+            [REP Auto GI Other],
+            [SU - Area DESC],
+            [REP Business Unit],
+            [Product],
+            [Plant],
+            [Class],
+            [Product Family DESC],
+            [Month],
+            [Planned]
+        )
+        SELECT 
+            m.[BOARD customer group],
+            m.[Key account],
+            m.[REP Auto GI Other],
+            m.[SU - Area Reporting],
+            m.[REP Business Unit],
+            p.[Product],
+            p.[Plant],
+            pf.[Class],
+            pf.[Product Family DESC],
+            p.[Month],
+            p.[Spalte 4] as Planned
+        FROM Masterdata m
+        JOIN [board_staging_ROB].[dbo].[DP_RD_PPortfolio_PLAN] p
+            ON m.[BOARD customer group] = p.[BOARD customer group]
+        JOIN [board_staging_ROB].[dbo].[DP_RD_PPortfolio_Area_2] a
+            ON m.[BOARD customer group] = a.[BOARD customer group]
+        JOIN [board_staging_ROB].[dbo].[DP_RD_PPortfolio_PF_Class_2] pf
+            ON p.[BOARD customer group] = pf.[BOARD customer group] AND p.Product = pf.Product
+        WHERE m.rn = 1
+        AND a.[Spalte 2] != 0;
+        
+        
+
+        insert into [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_JOIN_ACT_PLAN_all] (
+        [Plant],
+            [SU - Area DESC],
+            [BOARD customer group],
+            [Class],
+            [Product Family DESC],  
+            [Product],
+            [Key account],
+            [REP Auto GI Other],
+            [REP Business Unit],
+            [Month],
+            [Actuals]
+            )
+        SELECT 
+            [Plant],
+            [SU - Area DESC],
+            [BOARD customer group],
+            [Class],
+            [Product Family DESC],  
+            [Product],
+            [Key account],
+            [REP Auto GI Other],
+            [REP Business Unit],
+            [Month],
+            Actuals
+        FROM [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_ACT_all]
+        
+
+        insert into [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_JOIN_ACT_PLAN_all] (
+        [Plant],
+            [SU - Area DESC],
+            [BOARD customer group],
+            [Class],
+            [Product Family DESC],  
+            [Product],
+            [Key account],
+            [REP Auto GI Other],
+            [REP Business Unit],
+            [Month],
+            [Planned]
+            )
+        SELECT 
+            [Plant],
+            [SU - Area DESC],
+            [BOARD customer group],
+            [Class],
+            [Product Family DESC],  
+            [Product],
+            [Key account],
+            [REP Auto GI Other],
+            [REP Business Unit],
+            [Month],
+            [Planned]
+        FROM [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_PLAN_all]
+        
+
+        update [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_JOIN_ACT_PLAN_all]
+        set Actuals = 0
+        where Actuals is null 
+        
+        update [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_JOIN_ACT_PLAN_all]
+        set Planned = 0
+        where Planned is null
+        
+
+        INSERT INTO [RDControlling].[dbo].[STAGING_Demand_Planning_all_times] (
+            [Plant],
+            [SU-Area DESC],
+            [BOARD customer group],
+            [Class],
+            [Product Family ID],  
+            [Product ID],
+            [Key account ID],
+            [REP Auto GI Other ID],
+            [Business Unit ID],
+            [Month],
+            [Actuals],
+            [Planned]
+        )
+        SELECT 
+            [Plant],
+            [SU - Area DESC],
+            [BOARD customer group],
+            [Class],
+            [Product Family DESC],  
+            [Product],
+            [Key account],
+            [REP Auto GI Other],
+            [REP Business Unit],
+            [Month],
+            Max([Actuals]) as Actuals,
+            Max([Planned]) as Planned
+        FROM [board_staging_ROB].[dbo].[DP_RD_PPortfolio_TBL_DemandPlanning_JOIN_ACT_PLAN_all]
+        where [BOARD customer group] is not NULL
+        Group by [Plant]
+            ,[SU - Area DESC]
+            ,[BOARD customer group]
+            ,[Class]
+            ,[Product Family DESC]
+            ,[Product]
+            ,[Key account]
+            ,[REP Auto GI Other]
+            ,[REP Business Unit]
+            ,[Month];
+        
+
+            INSERT INTO [RDControlling].[dbo].[TBL_Demand_Plan_TEST](
+        [Plant]
+            ,[SU-Area DESC]
+            ,[BOARD customer group]
+            ,[BOARD customer group DESC]
+            ,[VIS customer]
+            ,[Business Unit ID]
+            ,[Business Unit DESC]
+            ,[Class]
+            ,[Product Family ID]
+            ,[Product Family DESC]
+            ,[Product ID]
+            ,[Product DESC]
+            ,[Key account ID]
+            ,[Key account DESC]
+            ,[REP Auto GI Other ID]
+            ,[REP Auto GI Other DESC]
+            ,[Year]
+            ,[Month]
+            ,[Date]
+            ,[Actuals]
+            ,[Planned]
+            ,[Timestamp]
+            )
+        
+        SELECT [Plant]
+            ,[SU-Area DESC]
+            ,[BOARD customer group]
+            ,[BOARD customer group DESC]
+            ,[VIS customer]
+            ,[Business Unit ID]
+            ,[Business Unit DESC]
+            ,[Class]
+            ,[Product Family ID]
+            ,[Product Family DESC]
+            ,[Product ID]
+            ,[Product DESC]
+            ,[Key account ID]
+            ,[Key account DESC]
+            ,[REP Auto GI Other ID]
+            ,[REP Auto GI Other DESC]
+            ,[Year]
+            ,[Month]
+            ,[Date]
+            ,[Actuals]
+            ,[Planned]
+            ,[Timestamp]
+            FROM [RDControlling].[dbo].[STAGING_Demand_Planning_all_times];
+        
+
+        
+            UPDATE DP
+        SET [Business Unit DESC] = MAP.BUSINESS_UNIT_DESC
+        FROM [RDControlling].[dbo].[TBL_Demand_Plan_TEST] DP
+        JOIN [board_dwh_ROB].[dbo].[DP_MAPPING_BUSINESS_UNIT] MAP
+        ON DP.[Business Unit ID] COLLATE SQL_Latin1_General_CP1_CI_AS = MAP.BUSINESS_UNIT_ID COLLATE SQL_Latin1_General_CP1_CI_AS;
+
+        UPDATE DP
+        SET [Key account DESC] = MAP.KEY_ACCOUNT_DESC
+        FROM [RDControlling].[dbo].[TBL_Demand_Plan_TEST] DP
+        JOIN [board_dwh_ROB].[dbo].[DP_MAPPING_KEY_ACCOUNT] MAP
+        ON DP.[Key account ID] COLLATE SQL_Latin1_General_CP1_CI_AS = MAP.KEY_ACCOUNT_ID COLLATE SQL_Latin1_General_CP1_CI_AS;
+
+        UPDATE DP
+        SET [Product DESC] = MAP.Product_DESC
+        FROM [RDControlling].[dbo].[TBL_Demand_Plan_TEST] DP
+        JOIN [board_dwh_ROB].[dbo].[DP_MAPPING_PRODUCT] MAP
+        ON DP.[Product ID] COLLATE SQL_Latin1_General_CP1_CI_AS = MAP.Product_ID COLLATE SQL_Latin1_General_CP1_CI_AS;
+
+        UPDATE DP
+        SET [Product Family DESC] = MAP.PRODUCT_FAMILY_DESC
+        FROM [RDControlling].[dbo].[TBL_Demand_Plan_TEST] DP
+        JOIN [board_dwh_ROB].[dbo].[DP_MAPPING_PRODUCT_FAMILY] MAP
+        ON DP.[Product Family ID] COLLATE SQL_Latin1_General_CP1_CI_AS = MAP.PRODUCT_FAMILY_ID COLLATE SQL_Latin1_General_CP1_CI_AS;
+
+        UPDATE DP
+        SET [REP Auto GI Other DESC] = MAP.REP_AUTO_GI_OTHER_DESC
+        FROM [RDControlling].[dbo].[TBL_Demand_Plan_TEST] DP
+        JOIN [board_dwh_ROB].[dbo].[DP_MAPPING_REP_AUTO_GI_OTHER] MAP
+        ON DP.[REP Auto GI Other ID] COLLATE SQL_Latin1_General_CP1_CI_AS = MAP.REP_AUTO_GI_OTHER_ID COLLATE SQL_Latin1_General_CP1_CI_AS;
+        
+        
+        
+
+        UPDATE [RDControlling].[dbo].[TBL_Demand_Plan_Test]  
+        SET [BOARD customer group DESC] = [board_dwh_ROB].[dbo].[DP_BKgr].[BoardKundengruppe_Text]  
+        FROM [RDControlling].[dbo].[TBL_Demand_Plan_Test]  
+        JOIN [board_dwh_ROB].[dbo].[DP_BKgr]  
+        ON [RDControlling].[dbo].[TBL_Demand_Plan_Test].[BOARD customer group] COLLATE SQL_Latin1_General_CP1_CI_AS = [board_dwh_ROB].[dbo].[DP_BKgr].[BoardKundengruppe] COLLATE SQL_Latin1_General_CP1_CI_AS;
+        
+        
+        
+
+        UPDATE [RDControlling].[dbo].[TBL_Demand_Plan_Test]  
+        SET [VIS customer] = [board_dwh_ROB].[dbo].[DP_BKgr].[VIS-Kundengruppe]  
+        FROM [RDControlling].[dbo].[TBL_Demand_Plan_Test]  
+        JOIN [board_dwh_ROB].[dbo].[DP_BKgr]  
+        ON [RDControlling].[dbo].[TBL_Demand_Plan_Test].[BOARD customer group] COLLATE SQL_Latin1_General_CP1_CI_AS = [board_dwh_ROB].[dbo].[DP_BKgr].[BoardKundengruppe] COLLATE SQL_Latin1_General_CP1_CI_AS  
+        AND [board_dwh_ROB].[dbo].[DP_BKgr].[Werk] like '%' + [RDControlling].[dbo].[TBL_Demand_Plan_Test].[plant] + '%' COLLATE SQL_Latin1_General_CP1_CI_AS;
+        
+
+        UPDATE [RDControlling].[dbo].[TBL_Demand_Plan_TEST]
+        SET 
+            Date = Month,
+            Year = LEFT(Month, 4),
+            Month = RIGHT(Month, 2),
+            Timestamp = GETDATE();

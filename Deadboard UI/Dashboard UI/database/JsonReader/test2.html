@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON Gruppen und Steps</title>
+</head>
+<body>
+    <h1>Gruppen und Steps aus JSON</h1>
+    <div id="content"></div>
+    
+    <script src="data.js"></script>
+    <script>
+        // Alle Gruppen und Steps aus JSON-Daten extrahieren
+        const contentDiv = document.getElementById("content");
+
+        jsonData.forEach(procedure => {
+            procedure.procedureGroups.forEach(group => {
+                // Gruppe hinzufügen
+                const groupTitle = document.createElement("h2");
+                groupTitle.textContent = `Gruppe: ${group.description}`;
+                contentDiv.appendChild(groupTitle);
+
+                // Steps für diese Gruppe auflisten
+                const stepsList = document.createElement("ul");
+                group.steps.forEach(step => {
+                    const listItem = document.createElement("li");
+                    listItem.innerHTML = `<strong>Name:</strong> ${step.name} <br><strong>Detail:</strong> ${step.detail}`;
+                    stepsList.appendChild(listItem);
+                });
+
+                contentDiv.appendChild(stepsList);
+            });
+        });
+    </script>
+</body>
+</html>
